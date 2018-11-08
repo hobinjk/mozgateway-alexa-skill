@@ -57,7 +57,7 @@ def get_welcome_response():
     # that is not understood, they will be prompted again with this text.
     reprompt_text = "Please say the command you want by saying for example, " \
                     "turn on the kitchen."
-    should_end_session = False
+    should_end_session = True
     return build_response(session_attributes, build_speechlet_response(
         card_title, speech_output, reprompt_text, should_end_session))
 
@@ -75,6 +75,29 @@ def handle_session_end_request():
 def create_favorite_color_attributes(favorite_color):
     return {"favoriteColor": favorite_color}
 
+def message(body):
+    preposition = ''
+    action = body['payload']['keyword']
+    value = body['payload']['value']
+    if not value:
+        value = ''
+
+    if action == 'make':
+        verb = 'making'
+    elif action == 'change':
+        verb = 'changing'
+    elif action == 'set':
+        verb = 'setting'
+        preposition = 'to '
+    elif action == 'dim':
+        verb = 'dimming'
+        preposition = 'by '
+    elif action == 'brighten':
+        verb = 'brightening'
+        preposition = 'by '
+    else:
+        verb = action + 'ing'
+    return 'OK, {} the {} {}{}'.format(verb, body['payload']['thing'], preposition, value)
 
 def call_gateway_session(intent, session):
     """ Sets the color in the session and prepares the speech to reply to the
@@ -83,13 +106,12 @@ def call_gateway_session(intent, session):
 
     card_title = intent['name']
     session_attributes = {}
-    should_end_session = False
+    should_end_session = True
 
 
     if 'action' and 'thing' in intent['slots']:
         action = intent['slots']['action']['value']
         thing = intent['slots']['thing']['value']
-        speech_output = "Ok." + action +  " the " + thing
         reprompt_text = "Please say the command you want by saying for example, " \
                     "turn on the kitchen."
 
@@ -99,10 +121,10 @@ def call_gateway_session(intent, session):
         url = # Update here with the gateway URL
         headers = {'authorization':'Bearer <Update here with the jwt token>', 'content-Type': 'application/json', 'Accept': 'application/json'}
         r = requests.post(url, headers=headers, data=payload)
-        #print(r)
-                    
-                    
-                    
+        speech_output = message(r.json())
+
+
+
     else:
         speech_output = "Please say the command you want by saying for example, " \
                     "turn on the kitchen."
@@ -125,7 +147,7 @@ def get_color_from_session(intent, session):
     else:
         speech_output = "I'm not sure what your favorite color is. " \
                         "You can say, my favorite color is red."
-        should_end_session = False
+        should_end_session = True
 
     # Setting reprompt_text to None signifies that we do not want to reprompt
     # the user. If the user does not respond or says something that is not
