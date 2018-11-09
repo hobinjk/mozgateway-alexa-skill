@@ -108,52 +108,36 @@ def call_gateway_session(intent, session):
     session_attributes = {}
     should_end_session = True
 
-
     if 'action' and 'thing' in intent['slots']:
         action = intent['slots']['action']['value']
         thing = intent['slots']['thing']['value']
-        reprompt_text = "Please say the command you want by saying for example, " \
-                    "turn on the kitchen."
+        reprompt_text = "Please say the command you want by saying " \
+            "for example, turn on the kitchen."
 
         gw_command = action + " the " + thing
         payload = "{\"text\":\" " + gw_command + " \"}"
 
-        url = # Update here with the gateway URL
-        headers = {'authorization':'Bearer <Update here with the jwt token>', 'content-Type': 'application/json', 'Accept': 'application/json'}
+        jwt = session['user']['accessToken']
+        url = jwt['header']['iss']
+        headers = {
+            'authorization': 'Bearer ' + jwt,
+            'content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
         r = requests.post(url, headers=headers, data=payload)
-        speech_output = message(r.json())
-
-
+        if r.status_code is not 200 and r.status_code is not 201:
+            speech_output = r.json()['message']
+        else:
+            speech_output = message(r.json())
 
     else:
-        speech_output = "Please say the command you want by saying for example, " \
-                    "turn on the kitchen."
-        reprompt_text = "Please say the command you want by saying for example, " \
-                    "turn on the kitchen."
+        speech_output = "Please say the command you want by saying " \
+            "for example, turn on the kitchen."
+        reprompt_text = "Please say the command you want by saying " \
+            "for example, turn on the kitchen."
 
     return build_response(session_attributes, build_speechlet_response(
         card_title, speech_output, reprompt_text, should_end_session))
-
-
-def get_color_from_session(intent, session):
-    session_attributes = {}
-    reprompt_text = None
-
-    if session.get('attributes', {}) and "favoriteColor" in session.get('attributes', {}):
-        favorite_color = session['attributes']['favoriteColor']
-        speech_output = "Your favorite color is " + favorite_color + \
-                        ". Goodbye."
-        should_end_session = True
-    else:
-        speech_output = "I'm not sure what your favorite color is. " \
-                        "You can say, my favorite color is red."
-        should_end_session = True
-
-    # Setting reprompt_text to None signifies that we do not want to reprompt
-    # the user. If the user does not respond or says something that is not
-    # understood, the session will end.
-    return build_response(session_attributes, build_speechlet_response(
-        intent['name'], speech_output, reprompt_text, should_end_session))
 
 
 # --------------- Events ------------------
@@ -161,7 +145,8 @@ def get_color_from_session(intent, session):
 def on_session_started(session_started_request, session):
     """ Called when the session starts """
 
-    print("on_session_started requestId=" + session_started_request['requestId']
+    print("on_session_started requestId=" +
+          session_started_request['requestId']
           + ", sessionId=" + session['sessionId'])
 
 
@@ -181,6 +166,7 @@ def on_intent(intent_request, session):
 
     print("on_intent requestId=" + intent_request['requestId'] +
           ", sessionId=" + session['sessionId'])
+    print(intent_request)
 
     intent = intent_request['intent']
     intent_name = intent_request['intent']['name']
